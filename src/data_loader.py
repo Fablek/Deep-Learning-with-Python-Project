@@ -57,6 +57,9 @@ class DataLoader:
         X = df[['m', 'p', 'n_LU', 'N_C']].values
         y = df['R'].values
 
+        X = np.log1p(X)
+        y = np.log1p(np.clip(y, 0, None))
+
         return X, y
 
     def load_all_datasets(self) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
