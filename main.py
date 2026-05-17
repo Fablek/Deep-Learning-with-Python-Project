@@ -1,5 +1,5 @@
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 import pandas as pd
 from src.data_loader import DataLoader
@@ -7,6 +7,30 @@ from src.preprocessing import StandardScalerStrategy
 from src.models import RegressionModelFactory
 from src.evaluator import ModelEvaluator
 from src.plotter import ResultPlotter
+
+
+def get_hyperparams(n_samples):
+    if n_samples < 5:
+        return {
+            'hidden_layers': [8, 4],
+            'dropout_rate': 0.0,
+            'learning_rate': 0.005,
+            'patience': 50,
+        }
+    elif n_samples < 15:
+        return {
+            'hidden_layers': [32, 16],
+            'dropout_rate': 0.1,
+            'learning_rate': 0.002,
+            'patience': 30,
+        }
+    else:
+        return {
+            'hidden_layers': [64, 32],
+            'dropout_rate': 0.2,
+            'learning_rate': 0.001,
+            'patience': 20,
+        }
 
 
 def main():
@@ -23,26 +47,32 @@ def main():
     results_rows = []
 
     for idx, (dataset_name, (X, y)) in enumerate(datasets.items(), 1):
-        print(f"[{idx}/{len(datasets)}] Processing: {dataset_name} ({len(X)} samples)")
+        n = len(X)
+        hp = get_hyperparams(n)
+        n_splits = min(5, n)
+
+        print(f"[{idx}/{len(datasets)}] {dataset_name} ({n} samples, {n_splits}-fold, layers={hp['hidden_layers']})")
         print("-" * 50)
 
         scaler_X = StandardScalerStrategy()
         scaler_y = StandardScalerStrategy()
 
-        input_dim = X.shape[1]
         model_factory = RegressionModelFactory(
-            input_dim=input_dim,
-            hidden_layers=[64, 32],
-            learning_rate=0.001,
+            input_dim=X.shape[1],
+            hidden_layers=hp['hidden_layers'],
+            dropout_rate=hp['dropout_rate'],
+            learning_rate=hp['learning_rate'],
         )
 
-        evaluator = ModelEvaluator(model_factory, scaler_X, scaler_y)
+        evaluator = ModelEvaluator(
+            model_factory, scaler_X, scaler_y,
+            patience=hp['patience'],
+        )
 
-        n_splits = min(5, len(X))
         results = evaluator.evaluate(
             X, y,
             n_splits=n_splits,
-            epochs=100,
+            epochs=200,
             batch_size=32,
         )
 
@@ -53,8 +83,9 @@ def main():
 
         results_rows.append({
             'Dataset': dataset_name,
-            'Samples': len(X),
+            'Samples': n,
             'K-Folds': n_splits,
+            'Layers': str(hp['hidden_layers']),
             'MSE': round(results['mean_mse'], 4),
             'MAE': round(results['mean_mae'], 4),
             'Std_MSE': round(results['std_mse'], 4),

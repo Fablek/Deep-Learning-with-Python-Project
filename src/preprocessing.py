@@ -2,12 +2,13 @@ from abc import ABC, abstractmethod
 import numpy as np
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
+
 class ScalingStrategy(ABC):
     """
     Abstract interface for scaling strategies (Strategy Pattern).
     Ensures that any applied scaler provides the exact same interface.
     """
-    
+
     @abstractmethod
     def fit(self, data: np.ndarray) -> None:
         """Fits the scaler to the data (computes mean/std etc.)."""
@@ -17,7 +18,7 @@ class ScalingStrategy(ABC):
     def transform(self, data: np.ndarray) -> np.ndarray:
         """Transforms the data using the fitted scaler."""
         pass
-        
+
     @abstractmethod
     def fit_transform(self, data: np.ndarray) -> np.ndarray:
         """Fits the scaler and transforms the data in one step."""
@@ -42,7 +43,7 @@ class StandardScalerStrategy(ScalingStrategy):
 
     def transform(self, data: np.ndarray) -> np.ndarray:
         return self.scaler.transform(data)
-        
+
     def fit_transform(self, data: np.ndarray) -> np.ndarray:
         return self.scaler.fit_transform(data)
 
@@ -62,7 +63,7 @@ class MinMaxScalerStrategy(ScalingStrategy):
 
     def transform(self, data: np.ndarray) -> np.ndarray:
         return self.scaler.transform(data)
-        
+
     def fit_transform(self, data: np.ndarray) -> np.ndarray:
         return self.scaler.fit_transform(data)
 

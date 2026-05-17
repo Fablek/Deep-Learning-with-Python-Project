@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.model_selection import KFold
 from typing import Dict, Any
+from tensorflow.keras.callbacks import EarlyStopping
 from .preprocessing import ScalingStrategy
 from .models import RegressionModelFactory
 
@@ -10,16 +11,18 @@ class ModelEvaluator:
     def __init__(self,
                  model_factory: RegressionModelFactory,
                  scaler_X: ScalingStrategy,
-                 scaler_y: ScalingStrategy):
+                 scaler_y: ScalingStrategy,
+                 patience: int = 20):
         self.model_factory = model_factory
         self.scaler_X = scaler_X
         self.scaler_y = scaler_y
+        self.patience = patience
 
     def evaluate(self,
                  X: np.ndarray,
                  y: np.ndarray,
                  n_splits: int = 5,
-                 epochs: int = 100,
+                 epochs: int = 200,
                  batch_size: int = 32) -> Dict[str, Any]:
 
         n_samples = len(X)
@@ -32,7 +35,7 @@ class ModelEvaluator:
 
         y_2d = y.reshape(-1, 1)
 
-        print(f"  Running {actual_splits}-Fold Cross-Validation ({n_samples} samples)...")
+        print(f"  Running {actual_splits}-Fold CV ({n_samples} samples, patience={self.patience})...")
 
         for fold, (train_idx, val_idx) in enumerate(kfold.split(X)):
             X_train, X_val = X[train_idx], X[val_idx]
@@ -47,12 +50,20 @@ class ModelEvaluator:
             model = self.model_factory.create_model()
 
             actual_batch_size = min(batch_size, len(X_train))
+            actual_patience = min(self.patience, epochs // 3) if epochs // 3 > 0 else 1
+
+            early_stop = EarlyStopping(
+                monitor='val_loss',
+                patience=actual_patience,
+                restore_best_weights=True,
+            )
 
             history = model.fit(
                 X_train_scaled, y_train_scaled,
                 validation_data=(X_val_scaled, y_val_scaled),
                 epochs=epochs,
                 batch_size=actual_batch_size,
+                callbacks=[early_stop],
                 verbose=0
             )
 

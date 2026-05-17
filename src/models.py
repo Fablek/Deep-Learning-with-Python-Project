@@ -4,22 +4,23 @@ from tensorflow.keras.layers import Dense, Dropout, Input
 from tensorflow.keras.optimizers import Adam, SGD, RMSprop
 from typing import List
 
+
 class RegressionModelFactory:
     """
     Factory pattern for generating compiled Keras models dynamically.
-    Allows for easy hyperparameter tuning (layers, neurons, optimizers) 
+    Allows for easy hyperparameter tuning (layers, neurons, optimizers)
     during the K-Fold Cross Validation process.
     """
-    
-    def __init__(self, 
-                 input_dim: int, 
-                 hidden_layers: List[int] = [64, 32], 
+
+    def __init__(self,
+                 input_dim: int,
+                 hidden_layers: List[int] = [64, 32],
                  dropout_rate: float = 0.2,
                  optimizer_name: str = 'adam',
                  learning_rate: float = 0.001):
         """
         Initializes the factory with configurable hyperparameters.
-        
+
         Args:
             input_dim (int): Number of input features.
             hidden_layers (List[int]): List defining the number of neurons in each hidden layer.
@@ -32,7 +33,7 @@ class RegressionModelFactory:
         self.dropout_rate = dropout_rate
         self.optimizer_name = optimizer_name.lower()
         self.learning_rate = learning_rate
-        
+
     def _get_optimizer(self) -> tf.keras.optimizers.Optimizer:
         """Private method to resolve the optimizer instance based on the string name."""
         if self.optimizer_name == 'adam':
@@ -48,27 +49,22 @@ class RegressionModelFactory:
         """
         Builds and compiles a Feed-Forward Neural Network (MLP) for regression
         based on the provided hyperparameters.
-        
+
         Returns:
             Sequential: A compiled Keras model ready for training.
         """
         model = Sequential()
-        
-        # Input layer
+
         model.add(Input(shape=(self.input_dim,)))
-        
-        # Dynamically add hidden layers based on the hidden_layers list
+
         for neurons in self.hidden_layers:
             model.add(Dense(neurons, activation='relu'))
-            # Add Dropout only if the rate is greater than 0
             if self.dropout_rate > 0:
                 model.add(Dropout(self.dropout_rate))
-                
-        # Output layer: 1 neuron with linear activation for continuous regression output
+
         model.add(Dense(1, activation='linear'))
-        
-        # Compile the model
+
         optimizer = self._get_optimizer()
         model.compile(optimizer=optimizer, loss='mse', metrics=['mae'])
-        
+
         return model
